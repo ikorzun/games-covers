@@ -1,0 +1,7 @@
+{
+  "covers": [
+    "https://<username>.github.io/<repo>/covers/game1.png",
+    "https://<username>.github.io/<repo>/covers/game2.png"
+  ],
+  "version": "<commit-sha>"
+}
