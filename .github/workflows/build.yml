@@ -1,10 +1,11 @@
-name: Build covers.json
+name: Build covers JSONs (regular + square)
 
 on:
   push:
     branches: [ main ]
     paths:
       - 'covers/**'
+      - 'covers-square/**'
       - '.github/workflows/build.yml'
   workflow_dispatch:
 
@@ -14,40 +15,49 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-- name: Generate covers JSONs (regular + square)
-  run: |
-    python - <<'PY'
-    import os, json, urllib.parse
-    user = os.environ['GITHUB_ACTOR']
-    repo = os.environ['GITHUB_REPOSITORY'].split('/')[1]
-    sha  = os.environ['GITHUB_SHA']
+      - name: Generate covers.json & covers-square.json
+        run: |
+          python - <<'PY'
+          import os, json, urllib.parse
 
-    def build_list(folder):
-      if not os.path.isdir(folder):
-        return []
-      exts = {'.png','.jpg','.jpeg','.webp','.gif'}
-      files = []
-      for f in sorted(os.listdir(folder)):
-        if os.path.splitext(f)[1].lower() in exts:
-          files.append(f"https://{user}.github.io/{repo}/{folder}/{urllib.parse.quote(f)}")
-      return files
+          user = os.environ['GITHUB_ACTOR']
+          repo = os.environ['GITHUB_REPOSITORY'].split('/')[1]
+          sha  = os.environ['GITHUB_SHA']
 
-    data_regular = {"covers": build_list("covers"), "version": sha}
-    data_square  = {"covers": build_list("covers-square"), "version": sha}
+          exts = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'}
 
-    with open("covers.json","w") as fp: json.dump(data_regular, fp, indent=2)
-    with open("covers-square.json","w") as fp: json.dump(data_square, fp, indent=2)
-    PY
+          def build_list(folder):
+            if not os.path.isdir(folder):
+              return []
+            files = []
+            for f in sorted(os.listdir(folder)):
+              ext = os.path.splitext(f)[1].lower()
+              if ext in exts:
+                # URL‑кодируем имя файла (пробелы, скобки и т.д.)
+                files.append(f"https://{user}.github.io/{repo}/{folder}/{urllib.parse.quote(f)}")
+            return files
 
-    - name: Commit JSONs
-  run: |
-    if [[ -n "$(git status --porcelain covers.json covers-square.json)" ]]; then
-      git config user.name "github-actions"
-      git config user.email "actions@github.com"
-      git add covers.json covers-square.json
-      git commit -m "Update covers JSONs"
-      git push
-    fi
+          data_regular = { "covers": build_list("covers"),         "version": sha }
+          data_square  = { "covers": build_list("covers-square"),  "version": sha }
+
+          with open("covers.json", "w") as fp:
+              json.dump(data_regular, fp, indent=2)
+
+          with open("covers-square.json", "w") as fp:
+              json.dump(data_square, fp, indent=2)
+          PY
+
+      - name: Commit JSONs
+        run: |
+          if [[ -n "$(git status --porcelain covers.json covers-square.json)" ]]; then
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add covers.json covers-square.json
+            git commit -m "Update covers.json & covers-square.json"
+            git push
+          fi
